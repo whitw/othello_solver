@@ -1,224 +1,133 @@
 #include <iostream>
+#include <ctime>
 #include <string>
-#include <cstdio>
 #include <vector>
-#include <queue>
-using namespace std;
+#include <random>
+#include "othello_env.h"
+using std::cin;
+using std::cout;
+using std::endl;
+using std::vector;
+using std::pair;
 
-enum class piece : char{
-    EMPTY,
-    BLACK,
-    WHITE,
-    OBSTACLE,
-    INVALID
-};
-
+int szboard = 8;
 bool blackLeftUp = true;
 bool blackFirst = true;
-const int szboard = 8;
-const vector<pair<int, int>> dirList = { {1,1},{1,0},{1,-1},{0,-1},{-1,-1},{-1,0},{-1,1},{0,1} };
+int cntObstacle = 5;
 
-void init(piece** board, bool blackLeftUp = true, int sz = szboard) {
-    if (sz % 2 == 1) {
-        string exceptStr = "Size of the board is not even.(size=" + to_string(sz) + ")";
-        throw domain_error(exceptStr);
-    }
-    for (int i = 0; i < sz; i++) {
-        for (int j = 0; j < sz; j++) {
-            board[i][j] = piece::EMPTY;
-        }
-    }
-    board[sz / 2 - 1][sz / 2 - 1] = blackLeftUp ? piece::BLACK : piece::WHITE;
-    board[sz / 2    ][sz / 2    ] = blackLeftUp ? piece::BLACK : piece::WHITE;
-    board[sz / 2 - 1][sz / 2    ] = blackLeftUp ? piece::WHITE : piece::BLACK;
-    board[sz / 2    ][sz / 2 - 1] = blackLeftUp ? piece::WHITE : piece::BLACK;
-}
+bool customObstacle = false;
+bool blackUserInput = false;
+bool whiteUserInput = false;
 
-void drawBoard(piece** board, int sz = szboard) {
-    for (int i = 0; i < sz; i++) {
-        for (int j = 0; j < sz; j++) {
-            switch (board[i][j]) {
-            case piece::EMPTY:
-                printf(". ");
-                break;
-            case piece::BLACK:
-                printf("¡Û");
-                break;
-            case piece::WHITE:
-                printf("¡Ü");
-                break;
-            case piece::OBSTACLE:
-                printf("¡Ø");
-                break;
-            default:
-                printf("  ");
-                break;
+bool drawOnCMD = false;
+bool drawResult = false;
+int repeatCnt = 1000;
+bool drawRuntime = true;
 
+void placeObstacle(Env& env, int count)
+{
+    int a, b;
+    if (count > env.getSize() * env.getSize() - 4) {
+        for (int i = 0; i < env.getSize(); i++) {
+            for (int j = 0; j < env.getSize(); j++) {
+                env.set(i, j, piece::OBSTACLE);
             }
         }
-        printf("\n");
-    }
-}
-
-vector<pair<int, int>> calcPlaceable(piece** board, bool blackTurn, int sz);
-void drawPlaceAble(piece** board, bool blackTurn, int sz = szboard) {
-    vector<pair<int, int>> placeable = calcPlaceable(board, blackTurn, sz);
-    vector<pair<int, int>>::iterator iPlaceable = placeable.begin();
-    for (int i = 0; i < sz; i++) {
-        for (int j = 0; j < sz; j++) {
-            switch (board[i][j]) {
-            case piece::EMPTY:
-                if (iPlaceable != placeable.end() && make_pair(i, j) == *iPlaceable) {
-                    if (blackTurn) printf("¡Þ");
-                    else printf("¡ß");
-                    iPlaceable++;
-                    break;
-                }
-                else{
-                    printf("¡à");
-                    break;
-                }
-
-                case piece::BLACK:
-                printf("¡Û");
-                break;
-            case piece::WHITE:
-                printf("¡Ü");
-                break;
-            case piece::OBSTACLE:
-                printf("¡Ø");
-                break;
-            default:
-                printf("  ");
-                break;
-
-            }
-        }
-        printf("\n");
-    }
-}
-
-
-template <typename T, typename U>
-pair<T, U> operator+(const pair<T, U>& a, const pair<T, U>& b) {
-    return {a.first + b.first, a.second + b.second};
-}
-
-piece boardAt(piece** board, int x, int y, int sz=szboard) {
-    if (x < 0 || y < 0 || x >= szboard || y >= szboard) {
-        return piece::INVALID;
-    }
-    return board[x][y];
- }
-
-piece boardAt(piece** board, pair<int, int> loc, int sz = szboard) {
-    return boardAt(board, loc.first, loc.second, sz);
-}
-
-void placeAt(piece** board, int x, int y, piece pc, int sz = szboard) {
-    if (x < 0 || y < 0 || x >= szboard || y >= szboard || board[x][y] != piece::EMPTY) {
         return;
     }
-
-    //place it anyway.
-    board[x][y] = pc;
-    
-    //if the piece was BLACK or WHITE piece, flip pieces by the rule of the othello.
-    if (pc == piece::BLACK || pc == piece::WHITE) {
-        
-        vector<pair<int, int>> toFlip;
-        piece mine = pc;
-        piece yours = (pc == piece::BLACK ? piece::WHITE : piece::BLACK);
-        
-        for (auto dir : dirList) {
-            toFlip.clear();
-            pair<int, int> currPos = make_pair(x, y) + dir;
-            while (boardAt(board,currPos) == yours) {
-                toFlip.push_back(currPos);
-                currPos = currPos + dir;
-            }
-            if (boardAt(board, currPos) == mine) {
-                for (auto flips : toFlip) {
-                    board[flips.first][flips.second] = mine;
+    if (customObstacle) {
+        for (int i = 0; i < count;) {
+            env.draw();
+            if(drawOnCMD)
+                cout << "select the position to place obstacles(" << i + 1 << "/" << count << "):";
+            while (true) {
+                cin >> a >> b;
+                if (cin.fail()) {
+                    cin.clear();
+                    cin.ignore(256, '\n');
+                    continue;
+                }
+                if (!env.isPlaceable(a, b, piece::OBSTACLE)) {
+                    if (drawOnCMD)
+                        cout << "You can't place it there." << endl;
+                    break;
+                }
+                else {
+                    i++;
+                    break;
                 }
             }
+            env.set(a, b, piece::OBSTACLE);
         }
-
     }
-}
-
-bool calcPlaceableCell(piece** board, bool blackTurn, int x, int y, int sz = szboard) {
-    if (boardAt(board, x, y) == piece::EMPTY) {
-        for (auto dir : dirList) {
-            pair<int, int> currPos = make_pair(x, y) + dir;
-            //black turn:pattern W^nB
-            //white turn:pattern B^nW
-            piece mine = blackTurn ? piece::BLACK : piece::WHITE;
-            piece your = blackTurn ? piece::WHITE : piece::BLACK;
-            if (boardAt(board, currPos) == your) {
-                do { currPos = currPos + dir; } while (boardAt(board, currPos) == your);
-                if (boardAt(board, currPos) == mine) {
-                    return true;
+    else {
+        std::random_device rnd;
+        std::mt19937 gen(rnd());
+        std::uniform_int_distribution<int> dist(0, env.getSize() - 1);
+        for (int i = 0; i < count;) {
+            a = dist(gen);
+            b = dist(gen);
+            while (true) {
+                if (!env.isPlaceable(a, b, piece::OBSTACLE)) {
+                    break;
+                }
+                else {
+                    i++;
+                    break;
                 }
             }
+            env.set(a, b, piece::OBSTACLE);
         }
     }
-    return false;
-}
-vector<pair<int, int>> calcPlaceable(piece** board, bool blackTurn, int sz=szboard) {
-    vector<pair<int, int>> result;
-    for (int i = 0; i < sz;i++) {
-        for (int j = 0; j < sz; j++) {
-            if (calcPlaceableCell(board, blackTurn, i, j, sz)) {
-                result.push_back(make_pair(i, j));
-            }
-        }
-    }
-    return result;
 }
 
-int evaluate(piece** board, int row, int col, int turn, int sz=szboard) {
-    return 0;
-}
-
-int main() {
-    piece** board;
-    board = new piece*[szboard];
+void play(int szboard, bool blackLeftUp, bool blackFirst,
+          bool customObstacle, int cntObstacle, bool customBlack, bool customWhite)
+{
+    std::random_device rnd;
+    std::mt19937 gen(rnd());
     int a, b;
-    for (int i = 0; i < szboard; i++) {
-        board[i] = new piece[szboard];
-    }
-    init(board);
-    for (int i = 0; i < 5; i++) {
-        drawBoard(board);
-        cout << "select the position to place obstacles(" << i + 1 << "/5):";
-        while (true) {
-            cin >> a >> b;
-            if (cin.fail()) {
-                cin.clear();
-                cin.ignore(256, '\n');
-                continue;
+    Env env = Env(true, true, 8); //blackLeftUp = true, blackFirst=true, szboard=8(8*8)
+    placeObstacle(env, cntObstacle);
+
+    vector<pair<int, int>> placeAble;
+    while (true) {
+        //or env.drawPlaceable();
+        placeAble = env.calcPlaceable();
+        if (drawOnCMD) {
+            env.draw();
+            float blackScore = env.getBlackScore();
+            cout << "Portion:" << blackScore << " : " << 1 - blackScore << endl;
+            cout << "Turn:" << (env.isBlackTurn() ? "BLACK" : "WHITE") << endl;
+            cout << "placable:";
+            for (auto i : placeAble) {
+                cout << "(" << i.first << "," << i.second << ") ";
             }
-            else {
+        }
+        
+        if (placeAble.size() == 0) {
+
+            if (drawOnCMD) cout << "nowhere to place!" << endl;
+            env.reverseTurn();
+            placeAble = env.calcPlaceable();
+            if (placeAble.size() == 0) {
+                if (drawOnCMD) cout << "Game ended!" << endl;
                 break;
             }
+            continue;
         }
-        placeAt(board, a, b, piece::OBSTACLE);
-    }
-    bool blackTurn = blackFirst;
-    vector<pair<int, int>> placeAble;
-    while(true){
-        drawBoard(board);
-        //drawPlaceAble(board, blackTurn);
-        cout << "Turn:" << (blackTurn ? "BLACK" : "WHITE") << endl;
-        cout << "placable:";
-        placeAble = calcPlaceable(board, blackTurn);
-        for (auto i:placeAble) {
-            cout << "(" << i.first << "," << i.second << ") ";
-        }
-        while(true) {
-            cout << endl << "place at(input two 0-based integer):";
-            cin >> a >> b;
+        while (true) {
+            if ((env.isBlackTurn() && customBlack) || (env.isWhiteTurn() && customWhite)) {
+                if (drawOnCMD)
+                    cout << endl << "place at(input two 0-based integer):" << endl;
+                cin >> a >> b;
+            }
+            else {
+                std::uniform_int_distribution<int> dist(0, placeAble.size() - 1);
+                int which = dist(gen);
+                a = placeAble[which].first;
+                b = placeAble[which].second;
+            }
             if (cin.fail()) {
                 cin.clear();
                 cin.ignore(256, '\n');
@@ -226,23 +135,41 @@ int main() {
             }
             //if (a,b) not in placeAble continue;
             bool _valid = false;
-            if (placeAble.size() == 0)
-                _valid = true;
             for (auto i : placeAble) {
-                if (make_pair(a, b) == i) {
+                if (std::make_pair(a, b) == i) {
                     _valid = true;
                     break;
                 }
             }
-            if(_valid)
+            if (_valid)
                 break;
         }
-        placeAt(board, a, b, (blackTurn ? piece::BLACK : piece::WHITE));
-        blackTurn = !blackTurn;
+        env.placeAt(a, b);
     }
-    for (int i = 0; i < szboard; i++) {
-        delete[] board[i];
+    float blackScore = env.getBlackScore();
+    if (drawResult) {
+        cout << "final score:" << blackScore << ":" << 1 - blackScore << endl;
+        if (blackScore > 0.5001) {
+            cout << "Black Win!" << endl;
+        }
+        else if (env.getBlackScore() < 0.4999) {
+            cout << "White Win!" << endl;
+        }
+        else {
+            cout << "draw!" << endl;
+        }
+        env.draw();
     }
-    delete[] board;
+}
+
+int main()
+{
+    time_t begin = clock();
+    for (int i = 0; i < repeatCnt; i++) {
+        play(szboard, blackLeftUp, blackFirst, customObstacle, cntObstacle, blackUserInput, whiteUserInput);
+    }
+    time_t end = clock();
+    if (drawRuntime)
+        cout << "ellapsed " << (1.0f) * (end - begin) / CLOCKS_PER_SEC << "sec" << endl;
     return 0;
 }
