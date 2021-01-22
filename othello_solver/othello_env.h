@@ -22,6 +22,7 @@ public:
     inline void reverseTurn() { blackTurn = !blackTurn; }
     //return the size of board. The board will always be square, and the size of each side are always even.
     inline int getSize() const { return szboard; }
+    inline std::pair<int, int> getCountsPiece() { return std::make_pair(numBlack, numWhite); };
 
     void init();
     void draw() const;
