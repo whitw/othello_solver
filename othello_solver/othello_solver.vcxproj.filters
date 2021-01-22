@@ -24,9 +24,15 @@
     <ClCompile Include="othello_env_draw.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
+    <ClCompile Include="othello_ai.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="othello_env.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="othello_ai.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
   </ItemGroup>

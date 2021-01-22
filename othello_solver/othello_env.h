@@ -12,25 +12,25 @@ enum class piece : char {
 
 class Env {
 public:
-    Env(bool blackLeftUp = true, bool blackFirst = true, int szboard = 8);
+    Env(bool blackLeftUp, bool blackFirst, int szboard);
     ~Env();
-    inline bool isBlackLeftUp() { return blackLeftUp; }
-    inline bool isBlackFirst() { return blackFirst; }
-    inline bool isBlackTurn() { return blackTurn; }
-    inline bool isWhiteTurn() { return !blackTurn; }
-    inline void setBlackTurn(bool blackTurn) { blackTurn = blackTurn; }
+    inline bool isBlackLeftUp() const { return blackLeftUp; }
+    inline bool isBlackFirst() const { return blackFirst; }
+    inline bool isBlackTurn() const { return blackTurn; }
+    inline bool isWhiteTurn() const { return !blackTurn; }
+    inline void setBlackTurn(bool blackTurn) { this->blackTurn = blackTurn; }
     inline void reverseTurn() { blackTurn = !blackTurn; }
     //return the size of board. The board will always be square, and the size of each side are always even.
-    inline int getSize() { return szboard; }
+    inline int getSize() const { return szboard; }
 
     void init();
-    void draw();
-    void drawPlaceable();
+    void draw() const;
+    void drawPlaceable() const;
 
     //return board[x][y]
-    piece get(int x, int y);
+    piece get(int x, int y) const;
     //return board[x][y]
-    inline piece get(std::pair<int, int> x) { return get(x.first, x.second); }
+    inline piece get(std::pair<int, int> x) const { return get(x.first, x.second); }
 
     //board[x][y] = pc
     void set(int x, int y, piece pc);
@@ -43,23 +43,24 @@ public:
     inline void placeAt(std::pair<int, int>x) { placeAt(x.first, x.second); }
 
     //true if you can place piece pc at board[x][y]
-    bool isPlaceable(int x, int y, piece pc);
+    bool isPlaceable(int x, int y, piece pc) const;
     //true if you can place piece pc at board[x][y]
-    inline bool isPlaceable(std::pair<int, int> x, piece pc) { return isPlaceable(x.first, x.second, pc); }
+    inline bool isPlaceable(std::pair<int, int> x, piece pc) const { return isPlaceable(x.first, x.second, pc); }
     
     /*return all place that one can place this turn.
     call isBlackTurn() to check whose turn now is,
     call setBlackTurn(bool) to change the turn if you wish.*/
-    std::vector<std::pair<int, int>> calcPlaceable();
+    std::vector<std::pair<int, int>> calcPlaceable() const;
 
     /*copy environment with deep copy-ing board[][]
     and return the pointer to new dynamically allocated Env*/
-    Env* copy();
+    Env* new_copy();
 
     //return num(BlackPiece)/(num(BlackPiece) + num(WhitePiece))
     float getBlackScore();
     inline float getWhiteScore() { return 1 - getBlackScore(); }
 
+    std::pair<int, int> (*selectRule)();
 private:
     //will be used to implement the reversing method of othello game.
     const std::vector<std::pair<int, int>> dirList = { {1,1},{1,0},{1,-1},{0,-1},{-1,-1},{-1,0},{-1,1},{0,1} };

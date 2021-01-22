@@ -140,10 +140,12 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="othello_ai.cpp" />
     <ClCompile Include="othello_env.cpp" />
     <ClCompile Include="othello_env_draw.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="othello_ai.h" />
     <ClInclude Include="othello_env.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

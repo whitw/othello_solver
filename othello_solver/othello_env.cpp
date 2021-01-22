@@ -48,7 +48,7 @@ void Env::init()
 }
 
 
-piece Env::get(int x, int y)
+piece Env::get(int x, int y) const
 {
     if (x < 0 || y < 0 || x >= szboard || y >= szboard) {
         return piece::INVALID;
@@ -105,7 +105,7 @@ void Env::placeAt(int x, int y)
     set(x, y, mine);
 }
 
-bool Env::isPlaceable(int x, int y, piece pc)
+bool Env::isPlaceable(int x, int y, piece pc) const
 {
     if (pc == piece::BLACK || pc == piece::WHITE) {
         if (get(x, y) == piece::EMPTY) {
@@ -132,7 +132,7 @@ bool Env::isPlaceable(int x, int y, piece pc)
     return false;
 }
 
-std::vector<std::pair<int, int>> Env::calcPlaceable()
+std::vector<std::pair<int, int>> Env::calcPlaceable() const
 {
     piece mine = isBlackTurn()?piece::BLACK : piece::WHITE;
     std::vector<std::pair<int, int>> retval;
@@ -146,7 +146,7 @@ std::vector<std::pair<int, int>> Env::calcPlaceable()
     return retval;
 }
 
-Env* Env::copy()
+Env* Env::new_copy()
 {
     Env* retval = new Env(blackLeftUp, blackFirst, szboard);
     for (int i = 0; i < szboard; i++) {
@@ -154,6 +154,9 @@ Env* Env::copy()
             retval->board[i][j] = board[i][j];
         }
     }
+    retval->blackTurn = blackTurn;
+    retval->numBlack = numBlack;
+    retval->numWhite = numWhite;
     return retval;
 }
 

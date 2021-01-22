@@ -1,9 +1,12 @@
 #include <iostream>
+#include <iomanip>
 #include <ctime>
 #include <string>
 #include <vector>
 #include <random>
 #include "othello_env.h"
+#include "othello_ai.h"
+
 using std::cin;
 using std::cout;
 using std::endl;
@@ -12,17 +15,24 @@ using std::pair;
 
 int szboard = 8;
 bool blackLeftUp = true;
-bool blackFirst = true;
-int cntObstacle = 5;
+bool blackFirst = false;
+int cntObstacle = 1;
 
 bool customObstacle = false;
 bool blackUserInput = false;
 bool whiteUserInput = false;
+//selectRandom, maxBeneNow, minLossNextTurn
+pair<int, int> (*blackPlaceRule)(Env& env) = othello_ai::selectRandom;
+pair<int, int>(*whitePlaceRule)(Env& env) = othello_ai::selectRandom;
 
-bool drawOnCMD = false;
-bool drawResult = false;
-int repeatCnt = 1000;
-bool drawRuntime = true;
+bool drawOnCMD = false; //draw help.
+bool drawResult = false; //draw the result of the game. once per game.
+int repeatCnt = 10000;
+bool drawRuntime = false; //draw every step. once per turn.
+bool repeatWithReversedOrder = false;
+int blackWinCnt = 0;
+int whiteWinCnt = 0;
+bool drawBlackWinRate = true;
 
 void placeObstacle(Env& env, int count)
 {
@@ -81,14 +91,12 @@ void placeObstacle(Env& env, int count)
     }
 }
 
-void play(int szboard, bool blackLeftUp, bool blackFirst,
-          bool customObstacle, int cntObstacle, bool customBlack, bool customWhite)
+void play(int _szboard, bool _blackLeftUp, bool _blackFirst,
+          bool _customObstacle, int _cntObstacle, bool _customBlack, bool _customWhite)
 {
-    std::random_device rnd;
-    std::mt19937 gen(rnd());
     int a, b;
-    Env env = Env(true, true, 8); //blackLeftUp = true, blackFirst=true, szboard=8(8*8)
-    placeObstacle(env, cntObstacle);
+    Env env = Env(_blackLeftUp, _blackFirst, _szboard);
+    placeObstacle(env, _cntObstacle);
 
     vector<pair<int, int>> placeAble;
     while (true) {
@@ -103,6 +111,7 @@ void play(int szboard, bool blackLeftUp, bool blackFirst,
             for (auto i : placeAble) {
                 cout << "(" << i.first << "," << i.second << ") ";
             }
+            cout << endl;
         }
         
         if (placeAble.size() == 0) {
@@ -117,16 +126,21 @@ void play(int szboard, bool blackLeftUp, bool blackFirst,
             continue;
         }
         while (true) {
-            if ((env.isBlackTurn() && customBlack) || (env.isWhiteTurn() && customWhite)) {
+            if ((env.isBlackTurn() && _customBlack) || (env.isWhiteTurn() && _customWhite)) {
                 if (drawOnCMD)
                     cout << endl << "place at(input two 0-based integer):" << endl;
                 cin >> a >> b;
             }
             else {
-                std::uniform_int_distribution<int> dist(0, placeAble.size() - 1);
-                int which = dist(gen);
-                a = placeAble[which].first;
-                b = placeAble[which].second;
+                pair<int, int> toPlace;
+                if (env.isBlackTurn()) {
+                    toPlace = blackPlaceRule(env);
+                }
+                else {
+                    toPlace = whitePlaceRule(env);
+                }
+                a = toPlace.first;
+                b = toPlace.second;
             }
             if (cin.fail()) {
                 cin.clear();
@@ -147,19 +161,19 @@ void play(int szboard, bool blackLeftUp, bool blackFirst,
         env.placeAt(a, b);
     }
     float blackScore = env.getBlackScore();
-    if (drawResult) {
-        cout << "final score:" << blackScore << ":" << 1 - blackScore << endl;
-        if (blackScore > 0.5001) {
-            cout << "Black Win!" << endl;
-        }
-        else if (env.getBlackScore() < 0.4999) {
-            cout << "White Win!" << endl;
-        }
-        else {
-            cout << "draw!" << endl;
-        }
-        env.draw();
+    if (drawResult) cout << "final score:" << blackScore << ":" << 1 - blackScore << endl;
+    if (blackScore > 0.5001) {
+        blackWinCnt++;
+        if (drawResult) cout << "Black Win!" << endl;
     }
+    else if (blackScore < 0.4999) {
+        whiteWinCnt++;
+        if (drawResult) cout << "White Win!" << endl;
+    }
+    else {
+        if (drawResult) cout << "draw!" << endl;
+    }
+    if (drawResult) env.draw();
 }
 
 int main()
@@ -168,8 +182,19 @@ int main()
     for (int i = 0; i < repeatCnt; i++) {
         play(szboard, blackLeftUp, blackFirst, customObstacle, cntObstacle, blackUserInput, whiteUserInput);
     }
+    if (repeatWithReversedOrder) {
+        for (int i = 0; i < repeatCnt; i++) {
+            play(szboard, blackLeftUp, !blackFirst, customObstacle, cntObstacle, blackUserInput, whiteUserInput);
+        }
+    }
     time_t end = clock();
     if (drawRuntime)
         cout << "ellapsed " << (1.0f) * (end - begin) / CLOCKS_PER_SEC << "sec" << endl;
+    if (drawBlackWinRate) {
+        if (repeatWithReversedOrder) repeatCnt *= 2;
+        cout << "blackWin:" << (1.0f) * blackWinCnt / repeatCnt * 100 << "%" << endl;
+        cout << "whiteWin:" << (1.0f) * whiteWinCnt / repeatCnt * 100 << "%" << endl;
+        cout << "draw:" << (1.0f) * (repeatCnt - whiteWinCnt - blackWinCnt) / repeatCnt * 100 << "%" << endl;
+    }
     return 0;
 }

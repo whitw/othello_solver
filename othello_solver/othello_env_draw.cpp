@@ -1,6 +1,6 @@
 #include "othello_env.h"
 
-void Env::draw()
+void Env::draw() const
 {
     for (int i = 0; i < szboard; i++) {
         for (int j = 0; j < szboard; j++) {
@@ -26,7 +26,7 @@ void Env::draw()
     }
 }
 
-void Env::drawPlaceable()
+void Env::drawPlaceable() const
 {
     std::vector<std::pair<int, int>> placeable = calcPlaceable();
     std::vector<std::pair<int, int>>::iterator iPlaceable = placeable.begin();
