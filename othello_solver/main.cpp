@@ -25,11 +25,11 @@ bool whiteUserInput = false;
 pair<int, int> (*blackPlaceRule)(Env& env) = othello_ai::selectRandom;
 pair<int, int>(*whitePlaceRule)(Env& env) = othello_ai::selectRandom;
 
-bool drawOnCMD = false; //draw help.
+bool drawOnCMD = false; //draw every step.
 bool drawResult = false; //draw the result of the game. once per game.
 int repeatCnt = 10000;
-bool drawRuntime = false; //draw every step. once per turn.
-bool repeatWithReversedOrder = false;
+bool drawRuntime = true; //draw the ellapsed time.
+bool repeatWithReversedOrder = true;
 int blackWinCnt = 0;
 int whiteWinCnt = 0;
 bool drawBlackWinRate = true;
@@ -106,6 +106,7 @@ void play(int _szboard, bool _blackLeftUp, bool _blackFirst,
             env.draw();
             float blackScore = env.getBlackScore();
             cout << "Portion:" << blackScore << " : " << 1 - blackScore << endl;
+            cout << "numStones:" << env.getCountsPiece().first << ":" << env.getCountsPiece().second << endl;
             cout << "Turn:" << (env.isBlackTurn() ? "BLACK" : "WHITE") << endl;
             cout << "placable:";
             for (auto i : placeAble) {

@@ -162,10 +162,5 @@ Env* Env::new_copy()
 
 float Env::getBlackScore()
 {
-    if (isBlackTurn()) {
-        return numBlack / (float)(numBlack + numWhite);
-    }
-    else {
-        return numWhite / (float)(numBlack + numWhite);
-    }
+    return numBlack / (float)(numBlack + numWhite);
 }
