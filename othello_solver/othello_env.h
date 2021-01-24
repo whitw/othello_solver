@@ -60,7 +60,8 @@ public:
     //return num(BlackPiece)/(num(BlackPiece) + num(WhitePiece))
     float getBlackScore();
     inline float getWhiteScore() { return 1 - getBlackScore(); }
-
+    inline float getMyScore() { return isBlackTurn() ? getBlackScore() : getWhiteScore(); }
+    inline float getOtherScore() { return 1 - getMyScore(); }
     std::pair<int, int> (*selectRule)();
 private:
     //will be used to implement the reversing method of othello game.

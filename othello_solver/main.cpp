@@ -15,19 +15,19 @@ using std::pair;
 
 int szboard = 8;
 bool blackLeftUp = true;
-bool blackFirst = false;
-int cntObstacle = 1;
+bool blackFirst = true;
+int cntObstacle = 5;
 
 bool customObstacle = false;
-bool blackUserInput = false;
+bool blackUserInput = true;
 bool whiteUserInput = false;
 //selectRandom, maxBeneNow, minLossNextTurn
-pair<int, int> (*blackPlaceRule)(Env& env) = othello_ai::selectRandom;
-pair<int, int>(*whitePlaceRule)(Env& env) = othello_ai::selectRandom;
+pair<int, int> (*blackPlaceRule)(Env& env) = othello_ai::maxBeneNow;
+pair<int, int>(*whitePlaceRule)(Env& env) = othello_ai::minLossNextTurn;
 
-bool drawOnCMD = false; //draw every step.
-bool drawResult = false; //draw the result of the game. once per game.
-int repeatCnt = 10000;
+bool drawOnCMD = true; //draw every step.
+bool drawResult = true; //draw the result of the game. once per game.
+int repeatCnt = 1;
 bool drawRuntime = true; //draw the ellapsed time.
 bool repeatWithReversedOrder = true;
 int blackWinCnt = 0;
@@ -183,19 +183,30 @@ int main()
     for (int i = 0; i < repeatCnt; i++) {
         play(szboard, blackLeftUp, blackFirst, customObstacle, cntObstacle, blackUserInput, whiteUserInput);
     }
-    if (repeatWithReversedOrder) {
-        for (int i = 0; i < repeatCnt; i++) {
-            play(szboard, blackLeftUp, !blackFirst, customObstacle, cntObstacle, blackUserInput, whiteUserInput);
-        }
-    }
     time_t end = clock();
     if (drawRuntime)
         cout << "ellapsed " << (1.0f) * (end - begin) / CLOCKS_PER_SEC << "sec" << endl;
     if (drawBlackWinRate) {
-        if (repeatWithReversedOrder) repeatCnt *= 2;
+        cout << (blackFirst ? "BLACK" : "WHITE") << " First" << endl;
         cout << "blackWin:" << (1.0f) * blackWinCnt / repeatCnt * 100 << "%" << endl;
         cout << "whiteWin:" << (1.0f) * whiteWinCnt / repeatCnt * 100 << "%" << endl;
         cout << "draw:" << (1.0f) * (repeatCnt - whiteWinCnt - blackWinCnt) / repeatCnt * 100 << "%" << endl;
+    }
+    if (repeatWithReversedOrder) {
+        begin = clock();
+        blackWinCnt = 0, whiteWinCnt = 0;
+        for (int i = 0; i < repeatCnt; i++) {
+            play(szboard, blackLeftUp, !blackFirst, customObstacle, cntObstacle, blackUserInput, whiteUserInput);
+        }
+        end = clock();
+        if (drawRuntime)
+            cout << "ellapsed " << (1.0f) * (end - begin) / CLOCKS_PER_SEC << "sec" << endl;
+        if (drawBlackWinRate) {
+            cout << (!blackFirst ? "BLACK" : "WHITE") << " First" << endl;
+            cout << "blackWin:" << (1.0f) * blackWinCnt / repeatCnt * 100 << "%" << endl;
+            cout << "whiteWin:" << (1.0f) * whiteWinCnt / repeatCnt * 100 << "%" << endl;
+            cout << "draw:" << (1.0f) * (repeatCnt - whiteWinCnt - blackWinCnt) / repeatCnt * 100 << "%" << endl;
+        }
     }
     return 0;
 }
