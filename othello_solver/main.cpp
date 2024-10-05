@@ -15,24 +15,86 @@ using std::pair;
 
 int szboard = 8;
 bool blackLeftUp = true;
-bool blackFirst = false;
-int cntObstacle = 1;
+bool blackFirst = true;
+int cntObstacle = 5;
 
 bool customObstacle = false;
 bool blackUserInput = false;
 bool whiteUserInput = false;
 //selectRandom, maxBeneNow, minLossNextTurn
-pair<int, int> (*blackPlaceRule)(Env& env) = othello_ai::selectRandom;
-pair<int, int>(*whitePlaceRule)(Env& env) = othello_ai::selectRandom;
 
+pair<int, int> (*blackPlaceRule)(Env& env, vector<vector<float>> bias) = othello_ai::selectRandom;
+pair<int, int>(*whitePlaceRule)(Env& env, vector<vector<float>> bias) = othello_ai::minLossNextTurn;
+vector<vector<float>> bias;
 bool drawOnCMD = false; //draw every step.
 bool drawResult = false; //draw the result of the game. once per game.
-int repeatCnt = 10000;
+int repeatCnt = 500;
 bool drawRuntime = true; //draw the ellapsed time.
 bool repeatWithReversedOrder = true;
 int blackWinCnt = 0;
 int whiteWinCnt = 0;
 bool drawBlackWinRate = true;
+
+float getBiasRate(int atk, int def) {
+    return atk * 1.f / (def * 5.f + .01f);
+}
+
+/*
+calculateBias()
+uses locations of piece::OBSTACLE to calculate
+the preference of each place at board.
+if the preference is high, we may say that taking the position
+may lead to higher win rate.
+*/
+vector<vector<float>> calculateBias(const Env& env) {
+    vector<vector<float>> bias;
+    bias.resize(env.getSize());
+    /*
+        localAtkDir
+            number of direction that can be used to attack
+            the higher the better
+        localDefDir
+            number of directions that can be attacked
+            the lower the better
+        attackable
+            true if the next two points are
+            not obstacle, nor out of board.
+        could be attacked
+            true if some direction and the opposite directions are
+            both not obstacle nor out of board.
+        preference
+            (attackable)/(could be attacked + 1). quite arbitrary.
+    */
+    int localAtkDir = 0, localDefDir = 0;
+    for (int i = 0; i < env.getSize(); i++) {
+        bias[i] = vector<float>();
+        bias[i].resize(env.getSize());
+        for (int j = 0; j < env.getSize(); j++) {
+            localAtkDir = localDefDir = 0;
+            if (env.get(i, j) == piece::OBSTACLE) {
+                bias[i][j] = 0;
+                continue;
+            }
+            int dx[8] = {-1, -1, -1, 0, 0, 1, 1, 1};
+            int dy[8] = {-1, 0, 1, -1, 1, -1, 0, 1};
+            for (int k = 0; k < 4;k++) {
+                if (env.get(i+dx[k], j+dy[k]) != piece::OBSTACLE && env.get(i+dx[k], j+dy[k]) != piece::INVALID) {
+                    if (env.get(i - dx[k], j - dy[k]) != piece::OBSTACLE && env.get(i + dx[k], j + dy[k]) != piece::INVALID)
+                        localDefDir++;
+                    if (env.get(i + 2 * dx[k], j + 2 * dy[k]) != piece::OBSTACLE && env.get(i + dx[k], j + 2 * dy[k]) != piece::INVALID)
+                        localAtkDir++;
+                }
+            }
+            for(int k = 4; k < 8;k++)
+                if (env.get(i + dx[k], j + dy[k]) != piece::OBSTACLE && env.get(i + dx[k], j + dy[k]) != piece::INVALID) {
+                    if (env.get(i + 2 * dx[k], j + 2 * dy[k]) != piece::OBSTACLE && env.get(i + dx[k], j + 2 * dy[k]) != piece::INVALID)
+                        localAtkDir++;
+                }
+            bias[i][j] = getBiasRate(localAtkDir, localDefDir);
+        }
+    }
+    return bias;
+}
 
 void placeObstacle(Env& env, int count)
 {
@@ -97,7 +159,7 @@ void play(int _szboard, bool _blackLeftUp, bool _blackFirst,
     int a, b;
     Env env = Env(_blackLeftUp, _blackFirst, _szboard);
     placeObstacle(env, _cntObstacle);
-
+    bias = calculateBias(env);
     vector<pair<int, int>> placeAble;
     while (true) {
         //or env.drawPlaceable();
@@ -135,10 +197,10 @@ void play(int _szboard, bool _blackLeftUp, bool _blackFirst,
             else {
                 pair<int, int> toPlace;
                 if (env.isBlackTurn()) {
-                    toPlace = blackPlaceRule(env);
+                    toPlace = blackPlaceRule(env, bias);
                 }
                 else {
-                    toPlace = whitePlaceRule(env);
+                    toPlace = whitePlaceRule(env, bias);
                 }
                 a = toPlace.first;
                 b = toPlace.second;
@@ -183,19 +245,30 @@ int main()
     for (int i = 0; i < repeatCnt; i++) {
         play(szboard, blackLeftUp, blackFirst, customObstacle, cntObstacle, blackUserInput, whiteUserInput);
     }
-    if (repeatWithReversedOrder) {
-        for (int i = 0; i < repeatCnt; i++) {
-            play(szboard, blackLeftUp, !blackFirst, customObstacle, cntObstacle, blackUserInput, whiteUserInput);
-        }
-    }
     time_t end = clock();
     if (drawRuntime)
         cout << "ellapsed " << (1.0f) * (end - begin) / CLOCKS_PER_SEC << "sec" << endl;
     if (drawBlackWinRate) {
-        if (repeatWithReversedOrder) repeatCnt *= 2;
+        cout << (blackFirst ? "BLACK" : "WHITE") << " First" << endl;
         cout << "blackWin:" << (1.0f) * blackWinCnt / repeatCnt * 100 << "%" << endl;
         cout << "whiteWin:" << (1.0f) * whiteWinCnt / repeatCnt * 100 << "%" << endl;
         cout << "draw:" << (1.0f) * (repeatCnt - whiteWinCnt - blackWinCnt) / repeatCnt * 100 << "%" << endl;
+    }
+    if (repeatWithReversedOrder) {
+        begin = clock();
+        blackWinCnt = 0, whiteWinCnt = 0;
+        for (int i = 0; i < repeatCnt; i++) {
+            play(szboard, blackLeftUp, !blackFirst, customObstacle, cntObstacle, blackUserInput, whiteUserInput);
+        }
+        end = clock();
+        if (drawRuntime)
+            cout << "ellapsed " << (1.0f) * (end - begin) / CLOCKS_PER_SEC << "sec" << endl;
+        if (drawBlackWinRate) {
+            cout << (!blackFirst ? "BLACK" : "WHITE") << " First" << endl;
+            cout << "blackWin:" << (1.0f) * blackWinCnt / repeatCnt * 100 << "%" << endl;
+            cout << "whiteWin:" << (1.0f) * whiteWinCnt / repeatCnt * 100 << "%" << endl;
+            cout << "draw:" << (1.0f) * (repeatCnt - whiteWinCnt - blackWinCnt) / repeatCnt * 100 << "%" << endl;
+        }
     }
     return 0;
 }
